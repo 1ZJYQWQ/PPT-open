@@ -30,17 +30,18 @@ namespace PowerPointSidebar;
 /// </summary>
 public class MainForm : Form
 {
-    // ================= 配色 =================
-    private static readonly Color BgColor       = Color.FromArgb(32, 32, 36);
-    private static readonly Color TitleBarColor = Color.FromArgb(24, 24, 28);
-    private static readonly Color SeparatorCol  = Color.FromArgb(58, 58, 64);
-    private static readonly Color TextColor     = Color.FromArgb(235, 235, 235);
-    private static readonly Color DimTextColor  = Color.FromArgb(150, 150, 150);
-    private static readonly Color OverlayColor  = Color.FromArgb(238, 26, 26, 30);
+    // ================= 配色（浅色卡片） =================
+    private static readonly Color BgColor       = Color.FromArgb(247, 248, 251);       // 卡片底：近白浅灰
+    private static readonly Color TitleBarColor = Color.FromArgb(238, 240, 245);       // 标题栏略深
+    private static readonly Color SeparatorCol  = Color.FromArgb(222, 225, 232);       // 分隔线
+    private static readonly Color TextColor     = Color.FromArgb(48, 50, 58);          // 深灰：图标/文字
+    private static readonly Color DimTextColor  = Color.FromArgb(140, 143, 152);
+    private static readonly Color OverlayColor  = Color.FromArgb(246, 250, 251, 253);  // 浅色覆盖层
+    private static readonly Color CardBorder    = Color.FromArgb(214, 218, 226);       // 卡片描边
 
-    private static readonly Color AccentNav    = Color.FromArgb(80, 160, 255);
-    private static readonly Color AccentEraser = Color.FromArgb(190, 190, 200);
-    private static readonly Color AccentExit   = Color.FromArgb(220, 80, 80);
+    private static readonly Color AccentNav    = Color.FromArgb(45, 127, 249);         // 蓝
+    private static readonly Color AccentEraser = Color.FromArgb(120, 126, 138);        // 灰
+    private static readonly Color AccentExit   = Color.FromArgb(229, 72, 77);          // 红
 
     // 调色板预设色（5 列 × 3 行）。第一行是常用亮色，第二行是深色/冷色，第三行是中性与荧光色。
     private static readonly Color[] PaletteColors =
@@ -74,24 +75,24 @@ public class MainForm : Form
     //           除数来自 ScreenMetrics（读显示器 EDID 得到真实物理尺寸，
     //           读不到会兜底到名义 96 DPI，并允许命令行 --panel / --mm-per-dip 覆盖）。
 
-    /// <summary>标题栏高度。同时是拖动把手，12 mm 保证手指/细笔都好抓。</summary>
-    private const double MmTitleBar = 12;
-    /// <summary>单个按钮高度。11 mm &gt; 触控绝对下限 9 mm，留了点余量。</summary>
-    private const double MmButton = 11;
-    /// <summary>两组按钮之间分隔条的高度。</summary>
-    private const double MmSeparator = 3;
-    /// <summary>右上角 ✕ 关闭按钮见方。关闭是"代价大"的操作，按 9 mm 标准取 10。</summary>
-    private const double MmCloseBtn = 10;
+    /// <summary>标题栏高度。同时是拖动把手，10 mm 够手指/细笔抓。</summary>
+    private const double MmTitleBar = 10;
+    /// <summary>单个按钮高度。10 mm &gt; 触控绝对下限 9 mm。</summary>
+    private const double MmButton = 10;
+    /// <summary>右上角 ✕ 关闭按钮见方。</summary>
+    private const double MmCloseBtn = 9;
     /// <summary>朝向幻灯片那一侧的宽度抓握区宽度。</summary>
-    private const double MmResizeGrip = 10;
+    private const double MmResizeGrip = 9;
     /// <summary>贴边时离屏幕边缘的距离。放映时全屏独占、不触发边缘手势，故严丝合缝贴 0。</summary>
     private const double MmEdgeMargin = 0;
-    /// <summary>默认侧栏宽度（毫米）。30mm = 大屏下「结束放映」4字不切的物理下限。</summary>
+    /// <summary>默认侧栏宽度（毫米）。</summary>
     private const double MmWidth = 30;
     private const double MmWidthMin = 28;
     private const double MmWidthMax = 70;
     /// <summary>上下留白（毫米）。</summary>
     private const double MmPadding = 2;
+    /// <summary>内侧圆角半径（毫米）。贴屏那侧保持直角，不破坏贴边观感。</summary>
+    private const double MmCorner = 3;
 
     /// <summary>目标屏的物理尺寸信息（每逻辑像素多少毫米等）。ApplyDock 里刷新。</summary>
     private ScreenMetrics.Info _metrics = new();
@@ -107,9 +108,9 @@ public class MainForm : Form
 
     private int TitleBarH   => Mm2Px(MmTitleBar);
     private int ResizeGripW => Mm2Px(MmResizeGrip);
-    private int SepH        => Mm2Px(MmSeparator);
     private int MinBtnH     => Mm2Px(MmButton);
     private int DockMargin  => Mm2Px(MmEdgeMargin);
+    private int CornerR     => Mm2Px(MmCorner);
 
     // ================= Win32 =================
     [DllImport("user32.dll", SetLastError = true)]
@@ -478,8 +479,8 @@ public class MainForm : Form
     private double DpiScale => (DeviceDpi > 0 ? DeviceDpi : 96) / 96.0;
 
     /// <summary>
-    /// 内容的【自然高度】，毫米 —— 刚好装下标题栏、两个分隔条和五个按钮。
-    ///   12 + 2×2 + 2×3 + 5×11 = 77 mm
+    /// 内容的【自然高度】，毫米 —— 刚好装下标题栏和五个纯图标按钮（无分隔条）。
+    ///   10 + 2×2 + 5×10 = 64 mm
     ///
     /// 下限就是它：比它矮会把最后一个按钮裁掉（本窗体没有滚动条）。
     /// 想更高可以在「启动侧栏.cmd」的 HEIGHT 里按**毫米**指定。
@@ -487,8 +488,7 @@ public class MainForm : Form
     private double NaturalHeightMm()
     {
         int btnCount = _navButtons.Count > 0 ? _navButtons.Count : 5;
-        const int sepCount = 2;      // BuildUi() 里插了两个分隔条
-        return MmTitleBar + MmPadding * 2 + sepCount * MmSeparator + btnCount * MmButton;
+        return MmTitleBar + MmPadding * 2 + btnCount * MmButton;
     }
 
     /// <summary>解析出要用的宽度（毫米）。命令行 &gt; 用户手拖的设置 &gt; 默认值。</summary>
@@ -544,6 +544,7 @@ public class MainForm : Form
             SetBounds(wa.Right - w - DockMargin, top, w, h);
 
         if (_uiBuilt) LayoutStack();
+        ApplyRoundedRegion();
     }
 
     /// <summary>命令行覆盖（--width / --height，单位**毫米**；0 = 自动，负数 = 不改动）。</summary>
@@ -610,29 +611,10 @@ public class MainForm : Form
                       + $"  (✕ 占 x{cr.Left}..{cr.Right})");
 
         sb.AppendLine();
-        sb.AppendLine("--- 文字是否排得下 ---");
-        try
-        {
-            using var g = CreateGraphics();
-            int dipW = (int)Math.Round(_dockWidth / DpiScale);
-            using var font = new Font("Microsoft YaHei UI", dipW < 80 ? 8f : 9f, FontStyle.Bold);
-            int chip = Mm2Px(8), chipMargin = Mm2Px(2);
-            int availChip = _dockWidth - chip - chipMargin - 2;
-            sb.AppendLine($"  可用宽：无色块 {_dockWidth} px / 有色块 {availChip} px");
-            foreach (var label in new[] { "上一页", "下一页", "笔", "橡皮", "结束放映" })
-            {
-                bool hasChip = label == "笔";
-                int avail = hasChip ? availChip : _dockWidth;
-                int textW = (int)Math.Round(g.MeasureString(label, font).Width);
-                int margin = (avail - textW) / 2;
-                sb.AppendLine($"  {label,-5} 文字 {textW,3} px  可用 {avail,3} px  余量 {margin,3} px"
-                              + (margin < 2 ? "   <<< 放不下，侧栏太窄了" : ""));
-            }
-        }
-        catch (Exception ex)
-        {
-            sb.AppendLine("  文字测量失败  : " + ex.Message);
-        }
+        sb.AppendLine("--- 纯图标布局 ---");
+        sb.AppendLine("  按钮只画图标（名称靠悬停 ToolTip），所以不存在文字切字问题。");
+        sb.AppendLine($"  单按钮可用宽  : {_dockWidth} px");
+        sb.AppendLine("  图标源图      : 128 px（4× 超采样，放大到 ~96 px 仍清晰）");
         sb.AppendLine();
         sb.AppendLine($"最终 Bounds   : X={Bounds.X} Y={Bounds.Y}  {Bounds.Width} x {Bounds.Height}  (物理像素)");
         sb.AppendLine($"换算成逻辑    : {Bounds.Width / DpiScale:0} x {Bounds.Height / DpiScale:0}");
@@ -669,27 +651,29 @@ public class MainForm : Form
         _navButtons.Clear();
         _penBtn = null;
 
-        // ★ 刻意不给按钮挂 ToolTip：按钮上已经写着中文名，
-        //   鼠标扫过侧栏时弹出一堆气泡反而干扰放映。用户明确反馈过"提示太多"。
+        // 纯图标布局：按钮上没有文字，名称靠悬停 ToolTip 给出。
+        // ToolTip 不抢键盘焦点，放映全屏时也能正常弹出。
+        _tip ??= new ToolTip
+        {
+            InitialDelay = 350,
+            ReshowDelay = 150,
+            AutoPopDelay = 4000,
+            ShowAlways = true,
+        };
+
         AddButton("上一页", IconFactory.Previous(TextColor), AccentNav, OnPrevClicked);
         AddButton("下一页", IconFactory.Next(TextColor), AccentNav, OnNextClicked);
-        AddSeparator();
 
         _penBtn = AddButton("笔", IconFactory.Pen(TextColor), _penColor, OnPenClicked);
         _penBtn.ChipColor = _penColor;
         _penBtn.OnChipClick = () => OpenPalette();
 
-        // ★ 这里原本有个「荧光笔」按钮，已删除。原因：
-        //   PowerPoint 的 COM 接口只暴露一种笔（PpSlideShowPointerType 里只有 Pen，没有高亮笔），
-        //   也调不了笔头粗细/透明度，所以那个按钮实质上只是"把笔调成黄色"——
-        //   而颜色本来就能用「笔」右侧的色块改，等于完全冗余，
-        //   而且它还挂着一个错误的承诺（叫荧光笔但不是荧光笔）。
-        //   删掉它顺便省下一整行高度（6 个按钮 → 5 个），侧栏能更矮。
-        //   （PptController.UseHighlighter 保留着，将来若要做进程内加载项还用得上。）
-
+        // ★ 「荧光笔」按钮已删除：PowerPoint 的 COM 只暴露一种笔，那个按钮
+        //   实质只是"把笔调成黄色"，而颜色本来就能用「笔」右侧色条改，完全冗余。
         AddButton("橡皮", IconFactory.Eraser(TextColor), AccentEraser, OnEraserClicked, OnClearInkClicked);
-        AddSeparator();
-        AddButton("结束放映", IconFactory.Exit(TextColor), AccentExit, OnExitClicked);
+
+        // 结束放映用红色图标，和"停止"语义一致，也是唯一有破坏性的按钮
+        AddButton("结束放映", IconFactory.Exit(AccentExit), AccentExit, OnExitClicked);
 
         BuildOverlay();
         LayoutStack();
@@ -708,23 +692,12 @@ public class MainForm : Form
         btn.Click += (_, _) => onClick();
         if (onDoubleClick is not null) btn.DoubleClick += (_, _) => onDoubleClick();
 
+        _tip?.SetToolTip(btn, label);   // 纯图标：名称靠悬停提示补上
+
         _navButtons.Add(btn);
         _stack.Add(btn);
         Controls.Add(btn);
         return btn;
-    }
-
-    private void AddSeparator()
-    {
-        var sep = new Panel { Height = SepH, BackColor = BgColor };
-        sep.Paint += (s, e) =>
-        {
-            using var p = new Pen(SeparatorCol, 1f);
-            int y = sep.Height / 2;
-            e.Graphics.DrawLine(p, 12, y, sep.Width - 12, y);
-        };
-        _stack.Add(sep);
-        Controls.Add(sep);
     }
 
     /// <summary>
@@ -762,6 +735,7 @@ public class MainForm : Form
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
+        ApplyRoundedRegion();     // 尺寸一变就重算圆角
         if (_uiBuilt)
         {
             // 注意：这里**不要**改 _dockWidth。
@@ -781,30 +755,31 @@ public class MainForm : Form
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
+        // 标题栏底色 + 与按钮区之间一条细分隔线
         using (var tb = new SolidBrush(TitleBarColor))
             g.FillRectangle(tb, 0, 0, Width, TitleBarH);
+        using (var sepPen = new Pen(SeparatorCol, 1f))
+            g.DrawLine(sepPen, 0, TitleBarH - 0.5f, Width, TitleBarH - 0.5f);
 
-        // 标题栏里**不再有圆点**：红点和 ✕ 功能重复；黄点的"换边"用拖动就能做，
-        // 托盘右键菜单里也有。而且 3 mm 的小圆点对触控来说本来就点不中
-        // （手指接触面本身就有 9~10 mm）。整条标题栏现在都是拖动区，✕ 是唯一的按钮。
-
-        // 右上角 ✕：收进托盘（不是退出程序）
+        // 右上角 ✕：收进托盘（不是退出程序）。hover 时变红圆，明确是"收掉这一侧栏"。
         var closeRect = CloseButtonRect();
-        using (var cb = new SolidBrush(_hoverClose
-                   ? Color.FromArgb(220, 70, 70) : Color.FromArgb(58, 58, 64)))
-            g.FillRectangle(cb, closeRect);
-        using (var xPen = new Pen(_hoverClose ? Color.White : Color.FromArgb(210, 210, 210),
+        if (_hoverClose)
+        {
+            using var cbg = new SolidBrush(AccentExit);
+            using var cpath = RoundedRectPath(closeRect, Math.Max(2f, closeRect.Width * 0.28f));
+            g.FillPath(cbg, cpath);
+        }
+        using (var xPen = new Pen(_hoverClose ? Color.White : Color.FromArgb(96, 100, 110),
                                   Math.Max(1.5f, L(0.9))))
         {
-            int pad = Math.Max(3, (int)Math.Round(closeRect.Width * 0.26));
+            int pad = Math.Max(3, (int)Math.Round(closeRect.Width * 0.28));
             g.DrawLine(xPen, closeRect.Left + pad, closeRect.Top + pad,
                              closeRect.Right - pad, closeRect.Bottom - pad);
             g.DrawLine(xPen, closeRect.Right - pad, closeRect.Top + pad,
                              closeRect.Left + pad, closeRect.Bottom - pad);
         }
 
-        // 不画「PPT 侧栏」标题文字：名字在托盘图标的提示里已经有了，
-        // 标题栏这点宽度留给拖动把手更实用。
+        // 标题栏不再画「PPT 侧栏」文字，也不放圆点：整条都留给拖动把手。
 
         // ---- 拖动手感提示：✕ 以外的整条标题栏都能拖，中间画一排"抓手"短竖线 ----
         {
@@ -813,28 +788,29 @@ public class MainForm : Form
             int gap = gripRight - gripLeft;
             if (gap >= Mm2Px(4))
             {
-                using var dragPen = new Pen(Color.FromArgb(135, 135, 143), Math.Max(1.2f, L(0.8)));
+                using var dragPen = new Pen(Color.FromArgb(150, 155, 165), Math.Max(1.2f, L(0.8)));
                 float dy = TitleBarH / 2f;
                 float cx0 = (gripLeft + gripRight) / 2f;
                 int step = Math.Max(3, Math.Min(Mm2Px(1.6), gap / 6));
-                int half = Math.Max(2, Mm2Px(1.5));
+                int half = Math.Max(2, Mm2Px(1.4));
                 for (int i = -1; i <= 1; i++)
                     g.DrawLine(dragPen, cx0 + i * step, dy - half, cx0 + i * step, dy + half);
             }
         }
 
-        // 2) 宽度抓握区：画在【朝向幻灯片的内侧】、标题栏以下。
-        //    平时一条淡竖线，鼠标移上去点亮并加粗 —— 明确告诉用户"这里可以调宽"。
-        //    （原来固定画在最右边缘：贴屏幕右边时那条边正好在屏幕尽头，
-        //      既看不清、也没法往右拖。）
+        // 宽度抓握区：画在【朝向幻灯片的内侧】、标题栏以下，hover 点亮。
         bool hot = _hoverGrip;
         using (var gripPen = new Pen(
-                   hot ? Color.FromArgb(150, 190, 255) : Color.FromArgb(90, 90, 100),
+                   hot ? AccentNav : Color.FromArgb(202, 206, 214),
                    hot ? Math.Max(2f, L(2)) : Math.Max(1f, L(1))))
         {
             float gx = GripOnInnerLeft ? ResizeGripW / 2f : Width - ResizeGripW / 2f;
             g.DrawLine(gripPen, gx, TitleBarH, gx, Height - L(4));
         }
+
+        // 整块卡片描边（浅底在浅色幻灯片上也能看清边界）
+        using (var borderPen = new Pen(CardBorder, 1f))
+            g.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
     }
 
     /// <summary>
@@ -847,6 +823,56 @@ public class MainForm : Form
         int x = Width - size - Mm2Px(2);
         int y = Math.Max(0, (TitleBarH - size) / 2);
         return new Rectangle(x, y, size, size);
+    }
+
+    /// <summary>圆角矩形路径（半径自动夹到不超过短边一半）。</summary>
+    private static GraphicsPath RoundedRectPath(Rectangle r, float radius)
+    {
+        float d = Math.Min(radius * 2, Math.Min(r.Width, r.Height));
+        var p = new GraphicsPath();
+        if (d <= 1f) { p.AddRectangle(r); return p; }
+        p.AddArc(r.X, r.Y, d, d, 180, 90);
+        p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+        p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+        p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+        p.CloseFigure();
+        return p;
+    }
+
+    /// <summary>
+    /// 把窗体裁成圆角：**只圆内侧两角**（朝幻灯片那侧），贴屏那侧保持直角 ——
+    /// 既有圆角卡片观感，又不会在贴边处留缺口（贴边严丝合缝是首要诉求）。
+    /// </summary>
+    private void ApplyRoundedRegion()
+    {
+        int r = CornerR;
+        if (r <= 0 || Width <= 2 || Height <= 2) { Region = null; return; }
+
+        int w = Width, h = Height, d = r * 2;
+        using var path = new GraphicsPath();
+        if (GripOnInnerLeft)
+        {
+            // 内侧是左边 → 左两角圆、右两角直角
+            path.AddArc(0, 0, d, d, 180, 90);
+            path.AddLine(r, 0, w, 0);
+            path.AddLine(w, 0, w, h);
+            path.AddLine(w, h, r, h);
+            path.AddArc(0, h - d, d, d, 90, 90);
+        }
+        else
+        {
+            // 内侧是右边 → 右两角圆、左两角直角
+            path.AddLine(0, 0, w - r, 0);
+            path.AddArc(w - d, 0, d, d, 270, 90);
+            path.AddArc(w - d, h - d, d, d, 0, 90);
+            path.AddLine(w - r, h, 0, h);
+            path.AddLine(0, h, 0, 0);
+        }
+        path.CloseFigure();
+
+        var old = Region;
+        Region = new Region(path);
+        old?.Dispose();
     }
 
     // ===================================================================
@@ -1143,6 +1169,9 @@ public class MainForm : Form
     private Button? _overlayOk;          // 只需要一个「知道了」按钮：提示会自己消失
     private System.Windows.Forms.Timer? _overlayAutoHide;
 
+    /// <summary>悬停提示（纯图标布局下用来显示按钮名称）。必须作为字段存活，否则会被 GC。</summary>
+    private ToolTip? _tip;
+
     private void BuildOverlay()
     {
         _overlayText = new Label
@@ -1153,7 +1182,7 @@ public class MainForm : Form
             AutoSize = false,
         };
 
-        _overlayOk = MakeOverlayButton("知道了", Color.FromArgb(70, 120, 200));
+        _overlayOk = MakeOverlayButton("知道了", AccentNav);
         _overlayOk.Click += (_, _) => HideOverlay();
 
         _overlay = new Panel { BackColor = OverlayColor, Visible = false };
@@ -1220,7 +1249,7 @@ public class MainForm : Form
             // 悬停/按下都不改底色 —— 色块必须始终如实显示自己的颜色
             b.FlatAppearance.MouseOverBackColor = c;
             b.FlatAppearance.MouseDownBackColor = c;
-            b.FlatAppearance.BorderColor = Color.FromArgb(70, 70, 78);
+            b.FlatAppearance.BorderColor = Color.FromArgb(202, 206, 214);   // 浅底上用浅灰边
             b.FlatAppearance.BorderSize = 1;
 
             int idx = i;
@@ -1234,14 +1263,14 @@ public class MainForm : Form
             _palettePanel.Controls.Add(b);
         }
 
-        _paletteReset = MakeOverlayButton("恢复默认", Color.FromArgb(80, 80, 88));
+        _paletteReset = MakeOverlayButton("恢复默认", Color.FromArgb(120, 126, 138));
         _paletteReset.Click += (_, _) =>
         {
             ApplyColor(SettingsStore.DefaultPenColor);
             HideOverlay();
         };
 
-        _paletteClose = MakeOverlayButton("关闭", Color.FromArgb(70, 120, 200));
+        _paletteClose = MakeOverlayButton("关闭", AccentNav);
         _paletteClose.Click += (_, _) => HideOverlay();
 
         _palettePanel.Controls.Add(_paletteReset);
@@ -1280,7 +1309,7 @@ public class MainForm : Form
         foreach (var b in _swatches)
         {
             bool selected = b.BackColor.ToArgb() == current.ToArgb();
-            b.FlatAppearance.BorderColor = selected ? Color.White : Color.FromArgb(70, 70, 78);
+            b.FlatAppearance.BorderColor = selected ? AccentNav : Color.FromArgb(202, 206, 214);
             b.FlatAppearance.BorderSize = selected ? 3 : 1;
         }
     }
@@ -1414,10 +1443,10 @@ public class MainForm : Form
 [ToolboxItem(false)]
 public class SidebarButton : Panel
 {
-    private static readonly Color BtnBg      = Color.FromArgb(48, 48, 54);
-    private static readonly Color BtnHover   = Color.FromArgb(68, 68, 76);
-    private static readonly Color BtnPressed = Color.FromArgb(28, 28, 32);
-    private static readonly Color TextColor  = Color.FromArgb(236, 236, 236);
+    // ---- 浅色卡片配色：白底 / hover 浅蓝 / 按下更深蓝 ----
+    private static readonly Color BtnBg      = Color.FromArgb(252, 252, 253);
+    private static readonly Color BtnHover   = Color.FromArgb(232, 240, 254);
+    private static readonly Color BtnPressed = Color.FromArgb(214, 228, 252);
 
     private bool _hover, _pressed;
     private bool _chipHover;
@@ -1430,34 +1459,26 @@ public class SidebarButton : Panel
     /// <summary>非 null 时在按钮右侧画一个色块，点它会走 OnChipClick 而不是正常的 Click。</summary>
     public Color? ChipColor { get; set; }
 
-    /// <summary>点色块时触发。</summary>
+    /// <summary>点色条时触发。</summary>
     public Action? OnChipClick { get; set; }
 
-    /// <summary>本控件的 DPI 缩放倍数。（名字不能叫 Scale —— 会和 Control.Scale(float) 冲突）</summary>
-    private double DpiScaleOf => (DeviceDpi > 0 ? DeviceDpi : 96) / 96.0;
-
-    /// <summary>逻辑像素 → 物理像素。</summary>
-    private int Px(double logical) => (int)Math.Round(logical * DpiScaleOf);
-
     /// <summary>
-    /// 色块尺寸：固定 16 逻辑像素。
+    /// 换色色条宽度：按按钮高度取比例。
     ///
-    /// 之前按 `Width * 0.26` 算，但 `Width` 是**物理像素**：
-    /// 同一块 2560 屏在 100% 缩放下算出 20 逻辑像素、在 200% 缩放下只有 13 —— 又不一致。
-    /// 固定逻辑尺寸最稳。★ 从 18 收到 16、边距从 4 收到 3 是为了给文字让位 ——
-    /// 侧栏宽度降到 58 逻辑像素后，「荧光笔」这三个字正好卡在色块旁边。
+    /// ★ 从"右侧小方块"改成"右侧竖条"：纯图标布局下图标居中，色条靠右不抢位；
+    ///   竖条的点击面积也比小方块大得多（触控友好）。
+    ///   尺寸按**高度比例**算 —— 高度是按毫米定的，所以跨屏物理一致。
     /// </summary>
-    private int EffectiveChipSize() => Math.Min(Px(16), Math.Max(12, Height - 16));
+    private int ChipWidth() => Math.Max(6, (int)Math.Round(Height * 0.30));
 
-    private int ChipMargin() => Px(3);
+    private int ChipInset() => Math.Max(1, (int)Math.Round(Height * 0.16));
 
     public Rectangle ChipRect()
     {
         if (ChipColor is null) return Rectangle.Empty;
-        int size = EffectiveChipSize();
-        int cy = (Height - size) / 2;
-        int cx = Width - size - ChipMargin();
-        return new Rectangle(cx, cy, size, size);
+        int w = ChipWidth();
+        int inset = ChipInset();
+        return new Rectangle(Width - w - inset, inset, w, Math.Max(4, Height - inset * 2));
     }
 
     public SidebarButton()
@@ -1537,61 +1558,75 @@ public class SidebarButton : Panel
         base.OnClick(e);
     }
 
+    // ===================================================================
+    // 绘制：纯图标 + 圆角卡片
+    //   ★ 这一版去掉了按钮文字（宽度只有 30 mm，塞不下"图标 + 文字"，
+    //     文字会让按钮又高又挤）。名称改由悬停 ToolTip 给出。
+    // ===================================================================
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+
+        // ---- 圆角背景 ----
+        var rect = new Rectangle(0, 0, Math.Max(1, Width - 1), Math.Max(1, Height - 1));
+        int radius = Math.Max(3, (int)Math.Round(Height * 0.24));
+        using var path = RoundedPath(rect, radius);
 
         var bg = _pressed ? BtnPressed : (_hover ? BtnHover : BtnBg);
         using (var bgBrush = new SolidBrush(bg))
-            g.FillRectangle(bgBrush, ClientRectangle);
+            g.FillPath(bgBrush, path);
 
-        // 字号与图标也跟着宽度缩 —— 注意要按**逻辑宽度**判断，
-        // Width 是物理像素，用它会变成"缩放到 200% 就不缩字号了"
-        double logicalWidth = DpiScaleOf > 0 ? Width / DpiScaleOf : Width;
-        float fontSize = logicalWidth < 80 ? 8f : 9f;
-        using var font = new Font("Microsoft YaHei UI", fontSize, FontStyle.Bold);
-        using var textBrush = new SolidBrush(TextColor);
-        var ts = g.MeasureString(Label, font);
-
-        // 有色块时，图标与文字在「除去色块」的区域内居中，避免和色块打架
-        int chipSize = EffectiveChipSize();
-        int contentW = ChipColor is not null
-            ? Math.Max(20, Width - chipSize - ChipMargin() - 2)
-            : Width;
-
-        // 图标与文字整体垂直居中，适应不同按钮高度
-        int iconBox = Math.Clamp(Math.Min(Height / 3, contentW - 6), 18, 38);
-        int blockH = iconBox + 4 + (int)ts.Height;
-        int top = Math.Max(6, (Height - blockH) / 2);
-
-        if (IconImage is not null)
+        // hover / 按下：用强调色描边，反馈清晰
+        if (_hover || _pressed)
         {
-            var iconRect = new Rectangle((contentW - iconBox) / 2, top, iconBox, iconBox);
-            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            g.DrawImage(IconImage, iconRect);
+            using var hl = new Pen(AccentColor, _pressed ? 2.4f : 1.6f);
+            g.DrawPath(hl, path);
         }
 
-        g.DrawString(Label, font, textBrush, (contentW - ts.Width) / 2f, top + iconBox + 4);
+        // ---- 图标：纯图标居中，只避开右侧色条 ----
+        int chipReserve = ChipColor is not null ? ChipWidth() + ChipInset() : 0;
+        int contentW = Math.Max(12, Width - chipReserve);
+        int iconBox = Math.Clamp(Math.Min(contentW - 2, Height - 4), 14, 96);
+        var iconRect = new Rectangle((contentW - iconBox) / 2, (Height - iconBox) / 2, iconBox, iconBox);
+        if (IconImage is not null)
+            g.DrawImage(IconImage, iconRect);
 
-        // 色块（点它换颜色）
+        // ---- 右侧色条（点它换颜色）----
         if (ChipColor is Color chip)
         {
             var cr = ChipRect();
+            float crRadius = Math.Max(2, cr.Width / 2f);
+            using (var chipPath = RoundedPath(cr, crRadius))
             using (var chipBrush = new SolidBrush(chip))
-                g.FillRectangle(chipBrush, cr);
+                g.FillPath(chipBrush, chipPath);
 
-            // 亮色用深边、暗色用浅边，保证任何底色下都看得清边界
             bool light = (chip.R * 299 + chip.G * 587 + chip.B * 114) / 1000 > 140;
-            var border = _chipHover
-                ? Color.White
-                : (light ? Color.FromArgb(60, 60, 66) : Color.FromArgb(170, 170, 178));
-            using var chipPen = new Pen(border, _chipHover ? 2.4f : 1.4f);
-            g.DrawRectangle(chipPen, cr);
+            var edge = _chipHover
+                ? AccentColor
+                : (light ? Color.FromArgb(178, 184, 194) : Color.FromArgb(150, 150, 158));
+            using var chipPen = new Pen(edge, _chipHover ? 2.2f : 1.2f);
+            using var chipPath2 = RoundedPath(cr, crRadius);
+            g.DrawPath(chipPen, chipPath2);
         }
+    }
 
-        using var accentPen = new Pen(AccentColor, 2.2f);
-        g.DrawLine(accentPen, 14, Height - 1.2f, Width - 14, Height - 1.2f);
+    /// <summary>圆角矩形路径（半径会自动夹到不超过短边的一半）。</summary>
+    private static GraphicsPath RoundedPath(Rectangle r, float radius)
+    {
+        float d = Math.Min(radius * 2, Math.Min(r.Width, r.Height));
+        var p = new GraphicsPath();
+        if (d <= 1f)
+        {
+            p.AddRectangle(r);
+            return p;
+        }
+        p.AddArc(r.X, r.Y, d, d, 180, 90);
+        p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+        p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+        p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+        p.CloseFigure();
+        return p;
     }
 }
