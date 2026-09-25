@@ -12,8 +12,8 @@ internal static class IconFactory
 {
     private const int SourceSize = 32;
 
-    public static Bitmap Previous(Color color) => Arrow(color, mirror: true);
-    public static Bitmap Next(Color color) => Arrow(color, mirror: false);
+    public static Bitmap Previous(Color color) => Arrow(color, mirror: false);  // ← 指向左
+    public static Bitmap Next(Color color)     => Arrow(color, mirror: true);    // → 指向右
 
     public static Bitmap Pen(Color color)
     {
