@@ -86,9 +86,9 @@ public class MainForm : Form
     private const double MmResizeGrip = 10;
     /// <summary>贴边时离屏幕边缘的距离。放映时全屏独占、不触发边缘手势，故严丝合缝贴 0。</summary>
     private const double MmEdgeMargin = 0;
-    /// <summary>默认侧栏宽度。</summary>
-    private const double MmWidth = 38;
-    private const double MmWidthMin = 30;
+    /// <summary>默认侧栏宽度（毫米）。30mm = 大屏下「结束放映」4字不切的物理下限。</summary>
+    private const double MmWidth = 30;
+    private const double MmWidthMin = 28;
     private const double MmWidthMax = 70;
     /// <summary>上下留白（毫米）。</summary>
     private const double MmPadding = 2;
