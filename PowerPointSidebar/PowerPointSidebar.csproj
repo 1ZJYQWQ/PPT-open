@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PowerPointSidebar</RootNamespace>
+    <AssemblyName>PowerPointSidebar</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <LangVersion>latest</LangVersion>
+
+    <!-- 程序集元数据（由 SDK 自动生成 AssemblyInfo.cs） -->
+    <Product>PowerPoint 演示用侧边栏</Product>
+    <Company>PowerPointSidebar</Company>
+    <Description>PowerPoint 演示用侧边栏（上一页 / 下一页 / 笔 / 橡皮 / 结束放映）</Description>
+    <Copyright>Copyright © 2026</Copyright>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <NeutralLanguage>zh-Hans</NeutralLanguage>
+  </PropertyGroup>
+
+</Project>

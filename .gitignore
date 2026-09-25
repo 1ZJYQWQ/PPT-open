@@ -1,0 +1,16 @@
+# 构建产物
+bin/
+obj/
+.vs/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
+
+# 临时诊断文件
+_build.txt
+_commit_msg.txt
+_selftest_out.txt
+
+# WorkBuddy 内部状态（含自动快照，不进源码历史）
+.workbuddy/
